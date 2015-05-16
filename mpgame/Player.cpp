@@ -9854,7 +9854,7 @@ idPlayer::Killed
 void idPlayer::Killed( idEntity *inflictor, idEntity *attacker, int damage, const idVec3 &dir, int location ) {
 	float delay;
 
-	gameLocal.Printf("You've been killed!");
+	gameLocal.Printf("You've been killed!\n");
 
 	assert( !gameLocal.isClient );
 
@@ -9905,14 +9905,8 @@ void idPlayer::Killed( idEntity *inflictor, idEntity *attacker, int damage, cons
 							// Killed by enemy
 							float cashAward = (float) gameLocal.mpGame.mpBuyingManager.GetOpponentKillCashAward();
 							killer->GiveCash( cashAward );
-							if(killer->GetWeaponIndex( "weapon_gauntlet" ) == weapon ) {
-								gameLocal.Printf("Giving ammo, gauntlet");
-								killer->inventory.ammo[ammoMachinegunIndex] += 1;
-							}
-							else {
-								gameLocal.Printf("Giving ammo, blaster");
-								killer->inventory.ammo[ammoIndex] += 1;
-							}
+							gameLocal.Printf("Giving ammo, gauntlet\n");
+							killer->inventory.ammo[ammoMachinegunIndex] += 1;
 						}
 					}
 				}
