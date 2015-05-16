@@ -478,22 +478,52 @@ void GiveStuffToPlayer( idPlayer* player, const char* name, const char* value )
 	}
 // RAVEN BEGIN
 	if (idStr::Icmp(name, "quad") == 0) {
-		player->GivePowerUp( POWERUP_QUADDAMAGE, SEC2MS( 30.0f ) );
+		if(player->inventory.hasDecoy)
+		{
+			player->GivePowerUp( POWERUP_QUADDAMAGE, SEC2MS( 0.0f ) );
+		}
+		else if(!player->inventory.hasDecoy) {
+			player->inventory.hasDecoy = true;
+		}	
+		
 		return;
 	}
-
+	
 	if ( idStr::Icmp( name, "invis" ) == 0 ) {
-		player->GivePowerUp( POWERUP_INVISIBILITY, SEC2MS( 30.0f ) );
+		//New-------------------------------------------------------------
+		if(player->inventory.hasInvisibility)
+		{
+			player->GivePowerUp( POWERUP_INVISIBILITY, SEC2MS( 0.0f ) );
+		}
+		else if(!player->inventory.hasInvisibility) {
+			player->inventory.hasInvisibility = true;
+		}
+		//----------------------------------------------------------------
 		return;
 	}
 
 	if ( idStr::Icmp( name, "regen" ) == 0 ) {
-		player->GivePowerUp( POWERUP_REGENERATION, SEC2MS( 30.0f ) );
+		//New-------------------------------------------------------------
+		if(player->inventory.hasRegeneration)
+		{
+			player->GivePowerUp( POWERUP_REGENERATION, SEC2MS( 0.0f ) );
+		}
+		else if(!player->inventory.hasRegeneration) {
+			player->inventory.hasRegeneration = true;
+		}
+		//----------------------------------------------------------------
+		
 		return;
 	}
 
 	if ( idStr::Icmp( name, "haste" ) == 0 ) {
-		player->GivePowerUp( POWERUP_HASTE, SEC2MS( 30.0f ) );
+		if(player->inventory.hasTeleport)
+		{
+			player->GivePowerUp( POWERUP_HASTE, SEC2MS( 0.0f ) );
+		}
+		else if(!player->inventory.hasTeleport) {
+			player->inventory.hasTeleport = true;
+		}		
 		return;
 	}
 
@@ -3058,11 +3088,31 @@ idGameLocal::Use Decoy
 =================
 */
 
-void Cmd_Use_Decoy_f(const idCmdArgs& args) {
-	idPlayer	*player;
+//void Cmd_Use_Decoy_f(const idCmdArgs& args) {
+//	idPlayer	*player;
+//	player = gameLocal.GetLocalPlayer();
+//
+//	//player->useDecoy();*/
+//	int weaponIndex = player->GetWeaponIndex("weapon_blaster");
+//	int ammoBlasterIndex = player->inventory.AmmoIndexForWeaponIndex(weaponIndex);
+//	int weapon = player->GetCurrentWeapon();
+//
+//	player->inventory.ammo[ammoBlasterIndex] += 1;
+//}
 
-	player = gameLocal.GetLocalPlayer();
-	player->useDecoy();
+//void Cmd_Use_Decoy_f(const idCmdArgs& args) {
+//	idPlayer	*player;
+//	player = gameLocal.GetLocalPlayer();
+//
+//	player->SpawnFromSpawnSpot();
+//}
+
+void Cmd_Use_Decoy_f(const idCmdArgs& args) {
+	idPlayer *player = gameLocal.GetLocalPlayer();
+	idAngles	spawn_angles;
+	idVec3	 playerOrg = player->GetPhysics()->GetOrigin();
+	idPlayer &decoy = idPlayer();
+	decoy.SpawnToPoint(playerOrg, player->spawnAngles);
 }
 
 /*

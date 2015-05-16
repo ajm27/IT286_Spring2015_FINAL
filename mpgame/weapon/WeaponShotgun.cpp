@@ -50,7 +50,7 @@ rvWeaponShotgun::Spawn
 void rvWeaponShotgun::Spawn( void ) {
 	hitscans   = spawnArgs.GetFloat( "hitscans" );
 	
-	SetState( "Raise", 0 );	
+	SetState( "Raise", 0 );
 }
 
 /*

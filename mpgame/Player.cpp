@@ -1836,6 +1836,10 @@ void idPlayer::Spawn( void ) {
 	if ( entityNumber >= MAX_CLIENTS && !IsFakeClient() ) {
 		gameLocal.Error( "entityNum > MAX_CLIENTS for player.  Player may only be spawned with a client." );
 	}
+	inventory.hasInvisibility = false;
+	inventory.hasTeleport = false;
+	inventory.hasRegeneration = false;
+	inventory.hasDecoy = false;
 
 	// allow thinking during cinematics
 	cinematic = true;
@@ -4506,59 +4510,79 @@ void idPlayer::StartPowerUpEffect( int powerup ) {
 			break;
 		}
 		case POWERUP_QUADDAMAGE: {
-			powerUpOverlay = quadOverlay;
+			//powerUpOverlay = quadOverlay;
 
-			StopEffect( "fx_regeneration" );
-			PlayEffect( "fx_quaddamage", animator.GetJointHandle( "chest" ), true );			
-			StartSound( "snd_quaddamage_idle", SND_CHANNEL_POWERUP_IDLE, 0, false, NULL );
+			//StopEffect( "fx_regeneration" );
+			//PlayEffect( "fx_quaddamage", animator.GetJointHandle( "chest" ), true );			
+			//StartSound( "snd_quaddamage_idle", SND_CHANNEL_POWERUP_IDLE, 0, false, NULL );
 
-			// Spawn quad effect
-			powerupEffect = gameLocal.GetEffect( spawnArgs, "fx_quaddamage_crawl" );
-			powerupEffectTime = gameLocal.time;
-			powerupEffectType = POWERUP_QUADDAMAGE;
-
+			//// Spawn quad effect
+			//powerupEffect = gameLocal.GetEffect( spawnArgs, "fx_quaddamage_crawl" );
+			//powerupEffectTime = gameLocal.time;
+			//powerupEffectType = POWERUP_QUADDAMAGE;
+			if(inventory.hasDecoy) {
+				idPlayer *player = gameLocal.GetLocalPlayer();
+				idAngles	spawn_angles;
+				idVec3	 playerOrg = player->GetPhysics()->GetOrigin();
+				idPlayer &decoy = idPlayer();
+				decoy.SpawnToPoint(playerOrg, player->spawnAngles);
+			}
+			else if(!inventory.hasDecoy) {
+				inventory.hasDecoy = true;
+			}
 			break;
 		}
 
 		case POWERUP_REGENERATION: {
-
-			// when buy mode is enabled, we use the guard effect for team powerup regen ( more readable than everyone going red )
-			if ( gameLocal.IsTeamPowerups() ) {
-				// don't setup the powerup on dead bodies, it will float up where the body is invisible and the orientation will be messed up
-				if ( teamHealthRegen == NULL ) {
-					if ( health <= 0 ) {
-						// we can't start it now, it will be floating where the hidden dead body is
-						teamHealthRegenPending = true;
-					} else {
-						teamHealthRegen = PlayEffect( "fx_guard", renderEntity.origin, renderEntity.axis, true );
+			if(inventory.hasRegeneration) {
+				// when buy mode is enabled, we use the guard effect for team powerup regen ( more readable than everyone going red )
+				if ( gameLocal.IsTeamPowerups() ) {
+					// don't setup the powerup on dead bodies, it will float up where the body is invisible and the orientation will be messed up
+					if ( teamHealthRegen == NULL ) {
+						if ( health <= 0 ) {
+							// we can't start it now, it will be floating where the hidden dead body is
+							teamHealthRegenPending = true;
+						} else {
+							teamHealthRegen = PlayEffect( "fx_guard", renderEntity.origin, renderEntity.axis, true );
+						}
 					}
+				} else {
+					powerUpOverlay = regenerationOverlay;
+
+					StopEffect( "fx_quaddamage" );
+					PlayEffect( "fx_regeneration", animator.GetJointHandle( "chest" ), true );
+
+					// Spawn regen effect
+					powerupEffect = gameLocal.GetEffect( spawnArgs, "fx_regeneration" );			
+					powerupEffectTime = gameLocal.time;
+					powerupEffectType = POWERUP_REGENERATION;
 				}
-			} else {
-				powerUpOverlay = regenerationOverlay;
-
-				StopEffect( "fx_quaddamage" );
-				PlayEffect( "fx_regeneration", animator.GetJointHandle( "chest" ), true );
-
-				// Spawn regen effect
-				powerupEffect = gameLocal.GetEffect( spawnArgs, "fx_regeneration" );			
-				powerupEffectTime = gameLocal.time;
-				powerupEffectType = POWERUP_REGENERATION;
 			}
-
+			else if(!inventory.hasRegeneration) {
+				inventory.hasRegeneration = true;
+			}			
 			break;
 		}
 
 		case POWERUP_HASTE: {
-			powerUpOverlay = hasteOverlay;
-
-			hasteEffect = PlayEffect( "fx_haste", GetPhysics()->GetOrigin(), GetPhysics()->GetAxis(), true );
+			if(inventory.hasTeleport) {
+				powerUpOverlay = hasteOverlay;
+				hasteEffect = PlayEffect( "fx_haste", GetPhysics()->GetOrigin(), GetPhysics()->GetAxis(), true );
+			}
+			else if(!inventory.hasTeleport) {
+				inventory.hasTeleport = true;
+			}
 			break;
 		}
 		
 		case POWERUP_INVISIBILITY: {
-			powerUpOverlay = invisibilityOverlay;
-
-			powerUpSkin = declManager->FindSkin( spawnArgs.GetString( "skin_invisibility" ), false );
+			if(inventory.hasInvisibility) {
+				invisibilityOverlay = powerUpOverlay;
+				powerUpSkin = declManager->FindSkin( spawnArgs.GetString( "skin_invisibility" ), false );
+			}
+			else if(!inventory.hasInvisibility) {
+				inventory.hasInvisibility = true;
+			}
 			break;
 		}
 
@@ -8466,7 +8490,8 @@ void idPlayer::PerformImpulse( int impulse ) {
 				}
 				ToggleMap();
 			}
-*/			gameLocal.Printf("This worked motherfucker!");
+			
+*/			
 			break;
 		}
 		case IMPULSE_20: {
@@ -8502,9 +8527,61 @@ void idPlayer::PerformImpulse( int impulse ) {
    		}
 
 		case IMPULSE_23: {
-			if ( gameLocal.isClient || entityNumber == gameLocal.localClientNum ) {
- 				common->Printf("cannot trade, not enough ammo\n");
-   			} 			
+			if(inventory.hasInvisibility) {
+				gameLocal.Printf("hasInvis is true\n");
+				GivePowerUp( POWERUP_INVISIBILITY, SEC2MS( 5.0f ) );
+				inventory.hasInvisibility = false;
+			}
+			else if(!inventory.hasInvisibility)
+			{
+				gameLocal.Printf("hasInvis is false\n");
+			}
+   			break;
+   		}
+
+		case IMPULSE_24: {
+			if(inventory.hasRegeneration) {
+				gameLocal.Printf("hasRegen is true\n");
+				GivePowerUp( POWERUP_REGENERATION, SEC2MS( 5.0f ) );
+				inventory.hasRegeneration = false;
+			}
+			else if(!inventory.hasRegeneration)
+			{
+				gameLocal.Printf("hasRegen is false\n");
+			}
+   			break;
+   		}
+
+		case IMPULSE_25: {
+			if(inventory.hasTeleport) {
+				gameLocal.Printf("hasTeleport is true\n");
+				idPlayer	*player;
+				player = gameLocal.GetLocalPlayer();
+				player->SpawnFromSpawnSpot();
+				inventory.hasTeleport = false;
+			}
+			else if(!inventory.hasTeleport)
+			{
+				gameLocal.Printf("hasTeleport is false\n");
+			}
+   			break;
+   		}
+
+		case IMPULSE_26: {
+			if(inventory.hasDecoy) {
+				gameLocal.Printf("hasDecoy is true\n");
+				idPlayer	*player;
+				idItem		*decoy;
+				player = gameLocal.GetLocalPlayer();
+				
+				//decoy = 
+
+				inventory.hasDecoy = false;
+			}
+			else if(!inventory.hasDecoy)
+			{
+				gameLocal.Printf("hasTeleport is false\n");
+			}
    			break;
    		}
 
@@ -8512,6 +8589,7 @@ void idPlayer::PerformImpulse( int impulse ) {
  			if ( gameLocal.isClient || entityNumber == gameLocal.localClientNum ) {
  				gameLocal.mpGame.CastVote( gameLocal.localClientNum, true );
    			}
+			gameLocal.ServerSendChatMessage( gameLocal.localClientNum, "maybe here?", "successful" );
    			break;
    		}
    		case IMPULSE_29: {
@@ -9745,6 +9823,7 @@ idPlayer::Kill
 ==============
 */
 void idPlayer::Kill( bool delayRespawn, bool nodamage ) {
+	gameLocal.Printf("Got Kill!");
 	if ( spectating ) {
 		SpectateFreeFly( false );
 	} else if ( health > 0 ) {
@@ -9775,6 +9854,8 @@ idPlayer::Killed
 void idPlayer::Killed( idEntity *inflictor, idEntity *attacker, int damage, const idVec3 &dir, int location ) {
 	float delay;
 
+	gameLocal.Printf("You've been killed!");
+
 	assert( !gameLocal.isClient );
 
 	// stop taking knockback once dead
@@ -9790,7 +9871,7 @@ void idPlayer::Killed( idEntity *inflictor, idEntity *attacker, int damage, cons
 
 // squirrel: Mode-agnostic buymenus
 	if ( gameLocal.isMultiplayer ) {
-		if ( gameLocal.mpGame.IsBuyingAllowedInTheCurrentGameMode() ) {
+		if (/* gameLocal.mpGame.IsBuyingAllowedInTheCurrentGameMode() */ true) {
 			if ( gameLocal.mpGame.GetGameState()->GetMPGameState() != WARMUP ) {
 				/// Remove the player's armor
 				inventory.armor = 0;
@@ -9801,10 +9882,15 @@ void idPlayer::Killed( idEntity *inflictor, idEntity *attacker, int damage, cons
 
 				if ( attacker ) {
 					idPlayer* killer = NULL;
-					int ammoIndex = inventory.AmmoIndexForWeaponIndex(currentWeapon);
+					
 
 					if ( attacker->IsType( idPlayer::Type ) ) {
 						killer = static_cast<idPlayer*>(attacker);
+						int ammoIndex = killer->inventory.AmmoIndexForWeaponIndex(currentWeapon);
+						int weaponIndex = killer->GetWeaponIndex("weapon_machinegun");
+						int ammoMachinegunIndex = killer->inventory.AmmoIndexForWeaponIndex(weaponIndex);
+						int weapon = killer->GetCurrentWeapon();
+
 						if ( killer == this ) {
 							// Killed by self
 							float cashAward = (float) gameLocal.mpGame.mpBuyingManager.GetIntValueForKey( "playerCashAward_killingSelf", 0 );
@@ -9815,10 +9901,18 @@ void idPlayer::Killed( idEntity *inflictor, idEntity *attacker, int damage, cons
 							float cashAward = (float) gameLocal.mpGame.mpBuyingManager.GetIntValueForKey( "playerCashAward_killingTeammate", 0 );
 							killer->GiveCash( cashAward );
 						} else {
+							gameLocal.Printf("Got Kill");
 							// Killed by enemy
 							float cashAward = (float) gameLocal.mpGame.mpBuyingManager.GetOpponentKillCashAward();
 							killer->GiveCash( cashAward );
-							killer->inventory.ammo[ammoIndex] += 1;
+							if(killer->GetWeaponIndex( "weapon_gauntlet" ) == weapon ) {
+								gameLocal.Printf("Giving ammo, gauntlet");
+								killer->inventory.ammo[ammoMachinegunIndex] += 1;
+							}
+							else {
+								gameLocal.Printf("Giving ammo, blaster");
+								killer->inventory.ammo[ammoIndex] += 1;
+							}
 						}
 					}
 				}
@@ -9871,7 +9965,7 @@ void idPlayer::Killed( idEntity *inflictor, idEntity *attacker, int damage, cons
 	if ( weapon ) {					// cnicholson: Fix for crash if player dies while in vehicle
 		weapon->OwnerDied();		// get rid of weapon
 		if ( !noDrop ) {
-			DropWeapon( );				// drop the weapon as an item 
+			//DropWeapon( );				// drop the weapon as an item 
 		}
 		delete weapon;
 	}

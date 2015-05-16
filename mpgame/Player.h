@@ -196,6 +196,13 @@ class idInventory {
 public:
 	int						maxHealth;
 	int						weapons;
+	
+	//NEW-----------------------------------------
+	bool					hasInvisibility;
+	bool					hasTeleport;
+	bool					hasRegeneration;
+	bool					hasDecoy;
+	//--------------------------------------------
 // RITUAL BEGIN
 // squirrel: Mode-agnostic buymenus
 	int						carryOverWeapons;
